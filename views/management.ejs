@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Management Dashboard - MITS AMS</title>
+    <style>
+        :root { --bg-main: #0f111a; --bg-card: #131720; --bg-hover: #1a1e29; --border-color: #2a3140; --text-main: #f8fafc; --text-muted: #94a3b8; --primary: #3b82f6; --success: #10b981; --warning: #f59e0b; }
+        body { margin: 0; background-color: var(--bg-main); color: var(--text-main); font-family: 'Segoe UI', system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 260px; background: var(--bg-card); border-right: 1px solid var(--border-color); padding: 20px 0; }
+        .brand { font-size: 20px; font-weight: bold; padding: 0 20px 20px 20px; display: flex; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .brand img { width: 40px; height: 40px; margin-right: 10px; background: white; padding: 3px; border-radius: 5px; }
+        .nav-item { padding: 15px 25px; color: var(--primary); font-weight: bold; border-left: 4px solid var(--primary); background: rgba(59, 130, 246, 0.1); margin-top: 15px; cursor: default; }
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+        .card img { width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid var(--border-color); }
+        .card-body { padding: 20px; }
+        .badge { font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: bold; }
+        .badge.pending { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+        .badge.resolved { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="brand"><img src="/images/mits-logo.png" alt="Logo"> MITS Management</div>
+        <div class="nav-item">🛠️ Infrastructure Reports</div>
+        <a href="/" style="display:block; padding:15px 25px; color:#ef4444; text-decoration:none; font-weight:bold; margin-top:auto;">🚪 Logout</a>
+    </div>
+
+    <div class="main-content">
+        <h1 style="margin:0 0 10px 0;">Infrastructure Issues Reported by Students</h1>
+        <p style="color:var(--text-muted); margin-bottom:30px;">Review and manage broken items, electrical faults, and plumbing issues.</p>
+        
+        <div class="grid">
+            <% if(complaints.length === 0) { %>
+                <p style="color:var(--text-muted);">No issues reported yet. Campus is completely fine!</p>
+            <% } else { %>
+                <% complaints.forEach(c => { %>
+                    <div class="card">
+                        <img src="<%= c.photoBase64 %>" alt="Issue Photo">
+                        <div class="card-body">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <strong style="font-size:18px; color:var(--primary);"><%= c.type %> Issue</strong>
+                                <span class="badge <%= c.status.toLowerCase() %>"><%= c.status %></span>
+                            </div>
+                            <p style="margin:5px 0; font-size:13px; color:var(--text-muted);"><strong>Location:</strong> <%= c.building %>, Floor <%= c.floor %>, Room: <%= c.roomNo %></p>
+                            <p style="margin:5px 0; font-size:13px; color:var(--text-muted);"><strong>Reported By:</strong> <%= c.studentName %> (<%= c.studentId %>)</p>
+                            
+                            <div style="background:var(--bg-main); padding:10px; border-radius:5px; margin-top:15px; font-size:13px;">
+                                <strong>Notes:</strong> <%= c.notes || 'No extra notes provided.' %>
+                            </div>
+                            
+                            <% if(c.status === 'Pending') { %>
+                                <button onclick="resolveIssue('<%= c._id %>')" style="width:100%; padding:10px; margin-top:15px; border:none; border-radius:5px; background:var(--success); color:white; font-weight:bold; cursor:pointer;">✅ Mark as Resolved</button>
+                            <% } else { %>
+                                <button disabled style="width:100%; padding:10px; margin-top:15px; border:none; border-radius:5px; background:var(--bg-hover); color:var(--text-muted); font-weight:bold; cursor:not-allowed;">Issue Resolved</button>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }) %>
+            <% } %>
+        </div>
+    </div>
+
+    <script>
+        function resolveIssue(id) {
+            if(confirm("Are you sure this issue is fixed?")) {
+                fetch(`/api/resolve-complaint/${id}`, { method: 'POST' })
+                .then(res => res.json()).then(data => { if(data.success) window.location.reload(); });
+            }
+        }
+    </script>
+</body>
+</html>

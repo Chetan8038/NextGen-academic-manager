@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - MITS AMS</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        :root { --bg-main: #0f111a; --bg-card: #131720; --bg-hover: #1a1e29; --border-color: #2a3140; --text-main: #f8fafc; --text-muted: #94a3b8; --primary: #3b82f6; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; }
+        
+        /* NAYA: ANTI-SCREENSHOT & TEXT COPY PROTECTION */
+        body { margin: 0; background-color: var(--bg-main); color: var(--text-main); font-family: 'Segoe UI', system-ui, sans-serif; display: flex; height: 100vh; overflow: hidden; -webkit-user-select: none; user-select: none; }
+        @media print { body { display: none !important; } }
+        
+        .sidebar { width: 250px; background: var(--bg-card); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 0; }
+        .brand { font-size: 24px; font-weight: bold; color: var(--text-main); padding: 0 20px 20px 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; display: flex; align-items: center; }
+        .brand img { width: 40px; height: 40px; object-fit: contain; margin-right: 10px; background: white; padding: 3px; border-radius: 5px; }
+        .brand span { color: var(--primary); }
+        .nav-item { padding: 15px 25px; color: var(--text-muted); cursor: pointer; font-weight: 500; transition: 0.2s; border-left: 4px solid transparent; }
+        .nav-item:hover { background: var(--bg-hover); color: var(--text-main); }
+        .nav-item.active { background: var(--bg-hover); color: var(--primary); border-left-color: var(--primary); }
+        .logout-btn { margin-top: auto; padding: 15px 25px; color: var(--danger); cursor: pointer; font-weight: bold; }
+        .main-content { flex: 1; overflow-y: auto; padding: 30px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h1 { margin: 0; font-size: 28px; }
+        .header p { margin: 5px 0 0 0; color: var(--text-muted); font-size: 14px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .stat-card h3 { color: var(--text-muted); font-size: 13px; margin: 0 0 10px 0; text-transform: uppercase; }
+        .stat-card h2 { margin: 0; font-size: 32px; }
+        .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .chart-container { background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .chart-title { color: var(--text-main); font-weight: bold; margin-bottom: 15px; width: 100%; text-align: left; }
+        .calendar-container { background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); grid-column: span 2; }
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .cal-btn { background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border-color); padding: 5px 15px; border-radius: 5px; cursor: pointer; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; text-align: center; }
+        .cal-day-name { color: var(--text-muted); font-size: 12px; font-weight: bold; margin-bottom: 10px; }
+        .cal-day { padding: 10px; border-radius: 6px; background: var(--bg-hover); cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .cal-day:hover { transform: scale(1.1); }
+        .cal-day.empty { background: transparent; cursor: default; }
+        .cal-present { background: var(--success) !important; color: white !important; } 
+        .cal-absent { background: var(--danger) !important; color: white !important; }
+        .course-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+        .course-card { background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); cursor: pointer; transition: 0.3s; }
+        .course-card:hover { border-color: var(--primary); transform: translateY(-3px); }
+        .badge { background: rgba(59, 130, 246, 0.2); color: var(--primary); padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; border: 1px solid var(--primary); }
+        .progress-bar { width: 100%; height: 6px; background: var(--bg-hover); border-radius: 3px; margin-top: 15px; overflow: hidden; }
+        .progress-fill { height: 100%; }
+        .tab-section { display: none; }
+        .tab-section.active { display: block; }
+        .text-safe { color: var(--success) !important; } .text-warn { color: var(--warning) !important; } .text-danger { color: var(--danger) !important; }
+        .bg-safe { background-color: var(--success) !important; } .bg-warn { background-color: var(--warning) !important; } .bg-danger { background-color: var(--danger) !important; }
+        .quiz-item { background: var(--bg-hover); padding: 20px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .quiz-item.active-quiz { border-color: var(--warning); box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
+        .q-box { background: var(--bg-hover); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--primary); }
+        .form-input { width: 100%; background: #131720; color: white; border: 1px solid #2a3140; padding: 12px; border-radius: 6px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="brand"><img src="/images/mits-logo.png" alt="Logo"><span>MITS</span> AMS</div>
+        <div class="nav-item active" onclick="switchTab('dashboard', this)">🏠 Dashboard</div>
+        <div class="nav-item" onclick="switchTab('quizzes-tab', this)">📝 My Quizzes</div>
+        <div class="nav-item" onclick="switchTab('courses', this)">📚 My Courses</div>
+        <div class="nav-item" onclick="switchTab('attendance-scanner', this)">📷 Scan Attendance</div>
+        <div class="nav-item" onclick="switchTab('infra-tab', this)" style="color:var(--warning);">🛠️ Report Infrastructure</div>
+        <div class="nav-item" onclick="switchTab('profile', this)">👤 Profile & Settings</div>
+        <a href="/" style="text-decoration: none;" class="logout-btn">🚪 Logout</a>
+    </div>
+
+    <div class="main-content">
+        <div id="dashboard" class="tab-section active">
+            <div class="header"><div><h1>Welcome back, <%= user.name %>!</h1><p>Current Session: July-Dec 2026 | ID: <%= user.userId %></p></div></div>
+            <div id="dash-quiz-container" style="display: none; margin-bottom: 30px;"><h3 style="color: var(--warning); margin-top: 0;">⚠️ Action Required: Active Quizzes</h3><div id="dash-active-quizzes"></div></div>
+            <div class="stats-grid">
+                <div class="stat-card"><h3>Total Courses</h3><h2 style="color: var(--primary);"><%= courses.length %></h2></div>
+                <div class="stat-card"><h3>Total Classes</h3><h2><%= totalOverallClasses %></h2></div>
+                <div class="stat-card"><h3>Classes Attended</h3><h2><%= totalAttendedOverall %></h2></div>
+                <div class="stat-card"><h3>Overall Percentage</h3><% let oc = overallPercentage >= 75 ? 'text-safe' : (overallPercentage >= 60 ? 'text-warn' : 'text-danger'); %><h2 class="<%= oc %>"><%= overallPercentage %>%</h2></div>
+            </div>
+            <div class="analytics-grid">
+                <div class="chart-container"><div class="chart-title">Overall Attendance Distribution</div><canvas id="pieChart"></canvas></div>
+                <div class="chart-container"><div class="chart-title">Course-wise Attendance (%)</div><canvas id="barChart"></canvas></div>
+                <div class="calendar-container">
+                    <div class="cal-header"><h2 style="margin: 0; font-size: 18px;">Attendance Calendar</h2><div><button class="cal-btn" onclick="changeMonth(-1)">&#10094;</button><span id="cal-month-year" style="margin: 0 15px; font-weight: bold; color: var(--primary);">Month Year</span><button class="cal-btn" onclick="changeMonth(1)">&#10095;</button></div></div>
+                    <div class="cal-grid"><div class="cal-day-name">Sun</div><div class="cal-day-name">Mon</div><div class="cal-day-name">Tue</div><div class="cal-day-name">Wed</div><div class="cal-day-name">Thu</div><div class="cal-day-name">Fri</div><div class="cal-day-name">Sat</div></div>
+                    <div class="cal-grid" id="cal-days"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="quizzes-tab" class="tab-section"><div class="header"><div><h1>My Quizzes & Assessments</h1><p>View all your upcoming, active, and past quizzes across all subjects.</p></div></div><div id="global-quiz-list"><p style="color: var(--text-muted);">Loading your quizzes...</p></div></div>
+
+        <div id="courses" class="tab-section"><div class="header"><h1>My Enrolled Courses</h1></div><div class="course-grid">
+            <% courses.forEach(function(course) { %>
+                <div class="course-card">
+                    <div class="course-header"><h3 style="margin:0; color: var(--primary); font-size:16px;"><%= course.subjectName %></h3><span class="badge">THEORY</span></div>
+                    <p style="margin: 5px 0; color: var(--text-muted); font-size: 12px;">Batch: <%= course.batchName %></p><p style="margin: 0; font-size: 13px;">Faculty: <%= course.profName %></p>
+                    <% let pc = course.percentage >= 75 ? 'bg-safe' : (course.percentage >= 60 ? 'bg-warn' : 'bg-danger'); let tc = course.percentage >= 75 ? 'text-safe' : (course.percentage >= 60 ? 'text-warn' : 'text-danger'); %>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px; font-size: 12px;"><span>Attendance: <strong><%= course.attendedClasses %>/<%= course.totalClasses %></strong></span><strong class="<%= tc %>"><%= course.percentage %>%</strong></div>
+                    <div class="progress-bar"><div class="progress-fill <%= pc %>" style="<%='width:' + course.percentage + '%'%>"></div></div>
+                </div>
+            <% }); %>
+        </div></div>
+
+        <div id="attendance-scanner" class="tab-section"><div class="header"><h1>Scan GPS Attendance QR</h1></div><div style="background: var(--bg-card); padding: 30px; border-radius: 8px; text-align: center; max-width: 500px; margin: auto; border: 1px solid var(--border-color);"><button onclick="startScanner()" style="background: var(--warning); padding: 15px 30px; font-size: 16px; font-weight:bold; border: none; border-radius: 6px; color: white; cursor: pointer;">📷 START FAST SCANNER</button><div id="reader" style="margin-top: 20px; display: none;"></div><div id="status" style="margin-top: 20px; padding: 15px; border-radius: 5px; display: none; font-weight:bold;"></div></div></div>
+
+        <div id="infra-tab" class="tab-section">
+            <div class="header"><div><h1>🛠️ Report Infrastructure Issue</h1><p>Help us keep MITS clean and maintained. Upload a photo of any broken item in the campus.</p></div></div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                <div style="background: var(--bg-card); padding: 30px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <form id="infraForm" onsubmit="submitInfraIssue(event)">
+                        <div style="display:flex; gap:10px;"><input type="text" id="infraBuilding" class="form-input" placeholder="Building Name (e.g., Main Block)" required><input type="text" id="infraFloor" class="form-input" placeholder="Floor (e.g., 2nd Floor)" required></div>
+                        <input type="text" id="infraRoom" class="form-input" placeholder="Room/Lab No. (e.g., Room 105)" required>
+                        <label style="color:var(--text-muted); font-size:12px; margin-bottom:5px; display:block;">ISSUE TYPE</label>
+                        <select id="infraType" class="form-input" required><option value="Electrical">⚡ Electrical (Fan, Light, Board)</option><option value="Furniture">🪑 Furniture (Desk, Chair, Board)</option><option value="Plumbing">🚰 Plumbing (Tap, Washroom, Cooler)</option><option value="Other">🛠️ Other Item</option></select>
+                        <label style="color:var(--text-muted); font-size:12px; margin-bottom:5px; display:block;">UPLOAD PHOTO (Required)</label>
+                        <input type="file" id="infraImage" class="form-input" accept="image/*" required>
+                        <textarea id="infraNotes" class="form-input" placeholder="Optional Notes (e.g., Fan is making loud noise...)" rows="3"></textarea>
+                        <button type="submit" id="infraSubmitBtn" style="background: var(--warning); padding: 15px; width:100%; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer;">🚀 Submit to Management</button>
+                    </form>
+                </div>
+                <div style="background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); max-height:500px; overflow-y:auto;">
+                    <h3 style="margin-top:0; border-bottom:1px solid var(--border-color); padding-bottom:10px;">Your Previous Reports</h3>
+                    <% if(typeof myComplaints !== 'undefined' && myComplaints.length > 0) { %>
+                        <% myComplaints.forEach(c => { %>
+                            <div style="background:var(--bg-main); border:1px solid var(--border-color); padding:15px; border-radius:5px; margin-bottom:10px; display:flex; gap:15px;"><img src="<%= c.photoBase64 %>" style="width:80px; height:80px; object-fit:cover; border-radius:5px;"><div><strong style="color:white;"><%= c.type %> Issue</strong> <br><span style="font-size:12px; color:var(--text-muted);">📍 <%= c.building %>, Floor <%= c.floor %>, <%= c.roomNo %></span><br><% if(c.status === 'Resolved') { %><span style="background:rgba(16,185,129,0.2); color:var(--success); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">✅ Resolved</span><% } else { %><span style="background:rgba(245,158,11,0.2); color:var(--warning); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">⏳ Pending</span><% } %></div></div>
+                        <% }) %>
+                    <% } else { %><p style="color:var(--text-muted); font-size:13px;">No issues reported yet.</p><% } %>
+                </div>
+            </div>
+        </div>
+
+        <div id="profile" class="tab-section"><div class="header"><h1>Student Profile</h1></div><div style="background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); max-width: 500px;"><p><strong>Name:</strong> <%= user.name %></p><p><strong>ID:</strong> <%= user.userId %></p><p><strong>Branch:</strong> <%= user.branch %></p><p><strong>Semester:</strong> Semester <%= user.semester %></p></div></div>
+    </div>
+
+    <!-- Active Quiz & Result Modals (Hidden) -->
+    <div id="active-quiz-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); z-index: 9999; padding: 20px; overflow-y: auto;"><div style="max-width: 800px; margin: auto; background: var(--bg-card); padding: 30px; border-radius: 8px; border: 2px solid var(--danger);"><div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px;"><h2 id="aq-title" style="color: var(--primary); margin: 0;">Quiz Title</h2><div style="text-align: right;"><span style="color: var(--danger); font-weight: bold; font-size: 24px;" id="aq-timer">00:00</span><p style="margin: 0; color: var(--warning); font-size: 12px; font-weight: bold;">⚠️ Warnings: <span id="aq-warnings">0</span> / <span id="aq-max-warnings">3</span></p></div></div><div id="aq-questions-container"></div><button onclick="submitQuiz(false)" style="background: var(--success); width: 100%; padding: 15px; font-size: 18px; margin-top: 30px; border:none; border-radius:5px; color:white; font-weight:bold; cursor:pointer;">✅ Submit Quiz</button></div></div>
+    <div id="quiz-result-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; padding: 20px; overflow-y: auto;"><div style="max-width: 800px; margin: auto; background: var(--bg-card); padding: 30px; border-radius: 8px; border: 1px solid var(--success); position: relative;"><button onclick="document.getElementById('quiz-result-modal').style.display='none'" style="position: absolute; top: 20px; right: 20px; background: var(--danger); border:none; border-radius:5px; color:white; padding:5px 15px; cursor:pointer;">Close</button><h2 style="color: var(--success); margin-top: 0;" id="res-title">Quiz Analysis</h2><h3 id="res-score">Score: </h3><div id="res-questions-container" style="margin-top: 20px;"></div></div></div>
+
+    <script id="server-data" type="application/json">{"studentId": "<%= user.userId %>", "totalOverallClasses": <%= totalOverallClasses || 0 %>, "totalAttendedOverall": <%= totalAttendedOverall || 0 %>}</script>
+    <script id="course-data" type="application/json"><%- JSON.stringify(courses) %></script>
+    <script id="attendance-data" type="application/json"><%- JSON.stringify(attendance) %></script>
+    
+    <script>
+        // ================= ANTI-SCREENSHARE & SECURITY SCRIPT =================
+        document.addEventListener('contextmenu', e => e.preventDefault()); // Block Right Click
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'PrintScreen') { navigator.clipboard.writeText(''); alert("🚨 SECURITY: Screenshots are disabled!"); }
+        });
+        window.addEventListener('blur', () => {
+            if(document.getElementById("reader").style.display === "block") {
+                document.getElementById("reader").style.display = "none"; // Hide Scanner instantly
+                showStatus("🚨 SECURITY ALERT: Scanner Stopped! Window switch, call pickup, ya Screen recording is strictly prohibited during attendance.", "error");
+            }
+        });
+        
+        const serverData = JSON.parse(document.getElementById('server-data').textContent);
+        const currentStudentId = serverData.studentId; const totalOverallClasses = serverData.totalOverallClasses; const totalAttendedOverall = serverData.totalAttendedOverall;
+        const coursesData = JSON.parse(document.getElementById('course-data').textContent); const attLogsRaw = JSON.parse(document.getElementById('attendance-data').textContent);
+
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active'); element.classList.add('active');
+            if(tabId === 'quizzes-tab') fetchAllQuizzes();
+        }
+
+        window.onload = () => { initGraphs(); initCalendar(); fetchAllQuizzes(); };
+
+        function submitInfraIssue(e) {
+            e.preventDefault();
+            const btn = document.getElementById('infraSubmitBtn'); btn.innerText = "⏳ Uploading..."; btn.disabled = true;
+            const file = document.getElementById('infraImage').files[0];
+            const payload = { building: document.getElementById('infraBuilding').value, floor: document.getElementById('infraFloor').value, roomNo: document.getElementById('infraRoom').value, type: document.getElementById('infraType').value, notes: document.getElementById('infraNotes').value };
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                payload.photoBase64 = reader.result;
+                fetch('/api/submit-complaint', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(res => res.json()).then(data => { if(data.success) { alert(data.message); window.location.reload(); } else { alert(data.error); btn.innerText = "🚀 Submit to Management"; btn.disabled = false; } });
+            }
+            reader.readAsDataURL(file);
+        }
+
+        let quizActive = false, warnings = 0, maxWarnings = 3, currentQuizData = null, timerInterval = null, remainingSeconds = 0, shuffledQuestions = [];
+        function fetchAllQuizzes() {
+            fetch('/api/all-student-quizzes').then(res => res.json()).then(data => {
+                const globalContainer = document.getElementById('global-quiz-list'); const dashContainer = document.getElementById('dash-active-quizzes'); const dashWrapper = document.getElementById('dash-quiz-container');
+                globalContainer.innerHTML = ''; dashContainer.innerHTML = ''; let activeCount = 0; const serverTime = new Date(data.currentTime).getTime();
+                if(data.quizzes.length === 0) { globalContainer.innerHTML = '<p style="color:var(--text-muted);">No quizzes or assessments scheduled currently.</p>'; return; }
+                data.quizzes.forEach(q => {
+                    const course = data.courses.find(c => c._id.toString() === q.batchId.toString()); const subjectName = course ? course.subjectName : 'Unknown Subject';
+                    const startTime = new Date(q.startTime).getTime(); const endTime = new Date(q.endTime).getTime(); const result = data.results.find(r => r.quizId.toString() === q._id.toString());
+                    let statusHtml = ''; let isActiveNow = false;
+                    if(result) { 
+                        if(serverTime < endTime) statusHtml = `<span style="color:var(--warning);">⏳ Attempted. Results out at ${new Date(q.endTime).toLocaleTimeString()}</span>`;
+                        else { let bMsg = result.isBlocked ? `<span style="color:var(--danger);"> (BLOCKED)</span>` : ''; statusHtml = `<strong style="color:var(--success);">Marks: ${result.score}/${result.totalQuestions}</strong> ${bMsg}<br><button onclick='viewDetailedResult(${JSON.stringify(q)}, ${JSON.stringify(result)})' style="background:var(--primary); border:none; border-radius:3px; color:white; padding:5px 10px; margin-top:10px; cursor:pointer;">🔍 Analysis</button>`; }
+                    } else { 
+                        if(serverTime < startTime) statusHtml = `<span style="color:var(--text-muted);">Starts at: ${new Date(q.startTime).toLocaleString()}</span>`;
+                        else if(serverTime >= startTime && serverTime <= endTime) { isActiveNow = true; activeCount++; statusHtml = `<button onclick='startQuizAttempt(${JSON.stringify(q)})' style="background:var(--success); border:none; border-radius:3px; color:white; padding:10px 20px; font-weight:bold; cursor:pointer;">▶ Start Quiz Now</button>`; }
+                        else statusHtml = `<span style="color:var(--danger);">Missed (Time Over)</span>`;
+                    }
+                    const htmlCard = `<div class="quiz-item ${isActiveNow ? 'active-quiz' : ''}"><div><span class="badge" style="margin-bottom:5px; display:inline-block;">${subjectName}</span><br><strong style="font-size:18px;">${q.title}</strong><br><span style="font-size:12px; color:var(--text-muted);">Duration: ${q.duration} Mins | Ends: ${new Date(q.endTime).toLocaleTimeString()}</span></div><div style="text-align:right;">${statusHtml}</div></div>`;
+                    globalContainer.innerHTML += htmlCard; if(isActiveNow) dashContainer.innerHTML += htmlCard;
+                });
+                if(activeCount > 0) dashWrapper.style.display = 'block'; else dashWrapper.style.display = 'none';
+            });
+        }
+        function shuffleArray(array) { let newArr = [...array]; for (let i = newArr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [newArr[i], newArr[j]] = [newArr[j], newArr[i]]; } return newArr; }
+        document.addEventListener("visibilitychange", () => { if(quizActive && document.hidden) { warnings++; document.getElementById('aq-warnings').innerText = warnings; if(warnings >= maxWarnings) { alert(`⚠️ Limit reached! Quiz Auto-Submitted.`); submitQuiz(true); } else alert(`⚠️ WARNING ${warnings}/${maxWarnings} : Do NOT switch tabs!`); } });
+        function startQuizAttempt(quizObj) {
+            currentQuizData = quizObj; quizActive = true; warnings = 0; maxWarnings = quizObj.maxTabSwitches || 3;
+            document.getElementById('aq-title').innerText = quizObj.title; document.getElementById('aq-max-warnings').innerText = maxWarnings; document.getElementById('aq-warnings').innerText = "0"; document.getElementById('active-quiz-screen').style.display = 'block';
+            let questionsWithIndex = quizObj.questions.map((q, i) => ({...q, originalIndex: i})); shuffledQuestions = shuffleArray(questionsWithIndex); 
+            const qContainer = document.getElementById('aq-questions-container'); qContainer.innerHTML = '';
+            shuffledQuestions.forEach((q, idx) => {
+                let opts = ''; q.options.forEach((opt, optIdx) => { opts += `<label style="display:block; background:var(--bg-card); padding:10px; margin-top:10px; border-radius:5px; border:1px solid var(--border-color); cursor:pointer;"><input type="radio" name="q_ans_${q.originalIndex}" value="${optIdx}"> ${opt}</label>`; });
+                qContainer.innerHTML += `<div class="q-box"><strong style="font-size:16px;">Q${idx+1}: ${q.questionText}</strong><div style="margin-top:10px;">${opts}</div></div>`;
+            });
+            remainingSeconds = quizObj.duration * 60; updateTimerUI();
+            timerInterval = setInterval(() => { remainingSeconds--; updateTimerUI(); if(remainingSeconds <= 0) { alert("⏰ Time up!"); submitQuiz(false); } }, 1000);
+            try { document.documentElement.requestFullscreen(); } catch(e){}
+        }
+        function updateTimerUI() { const m = Math.floor(remainingSeconds / 60).toString().padStart(2, '0'); const s = (remainingSeconds % 60).toString().padStart(2, '0'); document.getElementById('aq-timer').innerText = `${m}:${s}`; }
+        function submitQuiz(isBlocked = false) {
+            if(!quizActive) return; clearInterval(timerInterval); quizActive = false; try { document.exitFullscreen(); } catch(e){}
+            let score = 0; let answersArray = [];
+            shuffledQuestions.forEach((q) => { const selected = document.querySelector(`input[name="q_ans_${q.originalIndex}"]:checked`); const selValue = selected ? parseInt(selected.value) : -1; if(selValue === q.correctOptionIndex) score++; answersArray.push({ questionIndex: q.originalIndex, selectedOption: selValue }); });
+            fetch('/api/submit-quiz', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quizId: currentQuizData._id, score: score, tabSwitches: warnings, isBlocked: isBlocked, answers: answersArray }) }).then(() => { document.getElementById('active-quiz-screen').style.display = 'none'; fetchAllQuizzes(); if(isBlocked) alert("Blocked due to cheating!"); else alert("Submitted Successfully!"); });
+        }
+        function viewDetailedResult(quiz, result) {
+            document.getElementById('quiz-result-modal').style.display = 'block'; document.getElementById('res-title').innerText = quiz.title + " Analysis"; document.getElementById('res-score').innerText = `Score: ${result.score} / ${result.totalQuestions}`;
+            const container = document.getElementById('res-questions-container'); container.innerHTML = '';
+            quiz.questions.forEach((q, qIndex) => {
+                const stuAnswer = result.answers.find(a => a.questionIndex === qIndex); const selOpt = stuAnswer ? stuAnswer.selectedOption : -1; let optsHtml = '';
+                q.options.forEach((opt, optIndex) => {
+                    let cssClass = 'padding:10px; margin-top:10px; border-radius:5px; border:1px solid var(--border-color); background:var(--bg-card);'; 
+                    if(optIndex === q.correctOptionIndex) cssClass = 'padding:10px; margin-top:10px; border-radius:5px; border:1px solid var(--success); background:rgba(16, 185, 129, 0.2); color:var(--success);'; 
+                    else if (optIndex === selOpt) cssClass = 'padding:10px; margin-top:10px; border-radius:5px; border:1px solid var(--danger); background:rgba(239, 68, 68, 0.2); color:var(--danger);'; 
+                    let labelIcon = ''; if(optIndex === selOpt && optIndex === q.correctOptionIndex) labelIcon = '✅ (Your Answer)'; else if (optIndex === selOpt) labelIcon = '❌ (Your Answer)'; else if (optIndex === q.correctOptionIndex) labelIcon = '✅ (Correct Answer)';
+                    optsHtml += `<div style="${cssClass}">${opt} <span style="float:right; font-weight:bold;">${labelIcon}</span></div>`;
+                });
+                if(selOpt === -1) optsHtml += `<p style="color:var(--warning); margin-top:10px;">⚠️ You skipped this question.</p>`;
+                container.innerHTML += `<div class="q-box"><strong style="font-size: 16px;">Q${qIndex + 1}: ${q.questionText}</strong><div style="margin-top:15px;">${optsHtml}</div></div>`;
+            });
+        }
+        function initGraphs() {
+            const pieCtx = document.getElementById('pieChart').getContext('2d'); const absentCount = totalOverallClasses - totalAttendedOverall;
+            new Chart(pieCtx, { type: 'pie', data: { labels: ['Present', 'Absent'], datasets: [{ data: [totalAttendedOverall, absentCount < 0 ? 0 : absentCount], backgroundColor: ['#10b981', '#ef4444'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } } } });
+            const barCtx = document.getElementById('barChart').getContext('2d'); const labels = coursesData.map(c => c.subjectName.substring(0, 15) + '...'); const dataPts = coursesData.map(c => parseFloat(c.percentage));
+            new Chart(barCtx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Attendance %', data: dataPts, backgroundColor: '#3b82f6', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100, ticks: { color: '#94a3b8' }, grid: { color: '#2a3140' } }, x: { ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 }, grid: { display: false } } }, plugins: { legend: { display: false } } } });
+        }
+        let currentMonth = new Date().getMonth(); let currentYear = new Date().getFullYear();
+        function initCalendar() { renderCalendar(currentMonth, currentYear); }
+        function changeMonth(dir) { currentMonth += dir; if (currentMonth > 11) { currentMonth = 0; currentYear++; } else if (currentMonth < 0) { currentMonth = 11; currentYear--; } renderCalendar(currentMonth, currentYear); }
+        function renderCalendar(month, year) {
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]; document.getElementById("cal-month-year").innerText = `${monthNames[month]} ${year}`;
+            const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); const calGrid = document.getElementById("cal-days"); calGrid.innerHTML = "";
+            for (let i = 0; i < firstDay; i++) calGrid.innerHTML += `<div class="cal-day empty"></div>`;
+            const logsByDate = {}; attLogsRaw.forEach(log => { const d = new Date(log.date); const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; if(!logsByDate[dateStr]) logsByDate[dateStr] = []; logsByDate[dateStr].push(log); });
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; const dayLogs = logsByDate[dateStr] || []; let cssClass = "";
+                if (dayLogs.length > 0) { const presents = dayLogs.filter(l => l.status === 'Present').length; if (presents >= (dayLogs.length / 2.0)) cssClass = "cal-present"; else cssClass = "cal-absent"; }
+                calGrid.innerHTML += `<div class="cal-day ${cssClass}">${day}</div>`;
+            }
+        }
+        function getDeviceId() { let id = localStorage.getItem('mits_device_id'); if (!id) { id = 'DEV_' + Math.random().toString(36).substr(2, 9); localStorage.setItem('mits_device_id', id); } return id; }
+        function showStatus(msg, type) { const el = document.getElementById("status"); el.style.display = "block"; el.innerText = msg; if(type==='success'){ el.style.background="rgba(16,185,129,0.2)"; el.style.color="#4ade80"; el.style.border="1px solid #10b981"; } else { el.style.background="rgba(239,68,68,0.2)"; el.style.color="#f87171"; el.style.border="1px solid #ef4444"; } }
+        
+        function startScanner() {
+            document.getElementById("reader").style.display = "block"; let scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+            scanner.render((qr) => {
+                scanner.clear(); document.getElementById("reader").style.display = "none"; showStatus("⏳ Fetching GPS Location...", "error");
+                const sCb = (pos) => sendAtt(qr, pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy); // NAYA: Accuracy pass ki hai
+                const eCb = () => showStatus("❌ Location (GPS) ON karna zaroori hai!", "error");
+                if (navigator.geolocation) navigator.geolocation.getCurrentPosition(sCb, eCb, {timeout:8000, enableHighAccuracy: true, maximumAge: 0}); // High Accuracy ON
+                else showStatus("❌ Browser does not support Location.", "error");
+            }, () => {});
+        }
+        
+        function sendAtt(qrData, lat, lng, accuracy) {
+            let data; try { data = JSON.parse(qrData); } catch(e) { return showStatus("❌ Invalid QR.", "error"); }
+            fetch('/api/mark-attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentId: currentStudentId, sessionId: data.sessionId, token: data.token, lat, lng, accuracy, deviceId: getDeviceId() }) })
+            .then(res => res.json()).then(r => { if(r.success) showStatus("✅ "+r.message, "success"); else showStatus("❌ "+r.error, "error"); });
+        }
+    </script>
+
+    <% if(typeof profileIncomplete !== 'undefined' && profileIncomplete === true) { %>
+    <style>.mandatory-modal-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); } .mandatory-modal { background: var(--bg-card); padding: 40px; border-radius: 12px; border: 2px solid var(--warning); width: 100%; max-width: 450px; text-align: left; box-shadow: 0 0 20px rgba(245, 158, 11, 0.2); }</style>
+    <div class="mandatory-modal-bg" id="mandatoryProfileModal"><div class="mandatory-modal"><h2 style="margin-top: 0; color: var(--warning); display: flex; align-items: center; gap: 10px;">⚠️ Action Required</h2><p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Aapki profile incomplete hai. Dashboard access karne ke liye please jo details missing hain unhe bharein.</p><form id="mandatoryProfileForm"><% if (!user.branch || user.branch.trim() === "") { %><label style="color: var(--text-main); font-weight: bold; font-size: 12px; margin-bottom: 5px; display: block;">SELECT BRANCH (Missing)</label><select id="manBranch" class="form-input" required><option value="" disabled selected>-- Select your branch --</option><option value="Computer Science and Design (CSD)">Computer Science and Design (CSD)</option><option value="Computer Science (CSE)">Computer Science (CSE)</option><option value="Information Technology (IT)">Information Technology (IT)</option></select><% } else { %><input type="hidden" id="manBranch" value="<%= user.branch %>"><% } %><% if (!user.semester || user.semester.trim() === "") { %><label style="color: var(--text-main); font-weight: bold; font-size: 12px; margin-bottom: 5px; margin-top: 15px; display: block;">SELECT SEMESTER (Missing)</label><select id="manSem" class="form-input" required><option value="" disabled selected>-- Select your semester --</option><option value="1">1st Semester</option><option value="2">2nd Semester</option><option value="3">3rd Semester</option><option value="4">4th Semester</option></select><% } else { %><input type="hidden" id="manSem" value="<%= user.semester %>"><% } %><button type="submit" style="background: var(--success); width: 100%; color: white; border: none; padding: 15px; border-radius: 6px; font-weight: bold; font-size: 16px; margin-top: 20px; cursor: pointer;">💾 Save & Continue</button></form></div></div>
+    <script>document.getElementById('mandatoryProfileForm').addEventListener('submit', function(e) { e.preventDefault(); const branch = document.getElementById('manBranch').value; const semester = document.getElementById('manSem').value; fetch('/api/mandatory-profile-update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ branch, semester }) }).then(res => res.json()).then(data => { if(data.success) { document.getElementById('mandatoryProfileModal').style.display = 'none'; window.location.reload(); } }); });</script>
+    <% } %>
+</body>
+</html>

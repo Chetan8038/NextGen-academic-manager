@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MITS AMS</title>
+    <style>
+        :root { --bg-main: #0f111a; --bg-card: #131720; --primary: #3b82f6; --text-main: #f8fafc; --text-muted: #94a3b8; --border-color: #2a3140; --danger: #ef4444; --success: #10b981;}
+        body { margin: 0; background-color: var(--bg-main); color: var(--text-main); font-family: 'Segoe UI', system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        
+        .auth-container { background: var(--bg-card); padding: 40px; border-radius: 12px; border: 1px solid var(--border-color); width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .text-center { text-align: center; }
+        .logo { width: 60px; height: 60px; object-fit: contain; margin-bottom: 10px; background: white; padding: 5px; border-radius: 8px; }
+        h2 { margin-top: 0; color: var(--primary); font-size: 24px; }
+        p.subtitle { color: var(--text-muted); font-size: 13px; margin-top: -10px; margin-bottom: 25px; }
+        
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 5px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .form-control { width: 100%; padding: 12px; background: var(--bg-main); border: 1px solid var(--border-color); color: white; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        .form-control:focus { outline: none; border-color: var(--primary); }
+        
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        
+        .error-msg { background: rgba(239, 68, 68, 0.1); color: var(--danger); padding: 12px; border-radius: 6px; margin-bottom: 20px; border: 1px solid var(--danger); font-size: 13px; text-align: center; font-weight: bold; }
+        .success-msg { background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 12px; border-radius: 6px; margin-bottom: 20px; border: 1px solid var(--success); font-size: 13px; text-align: center; font-weight: bold; }
+        
+        .toggle-link { color: var(--primary); cursor: pointer; text-decoration: none; font-size: 13px; display: block; margin-top: 20px; text-align: center; font-weight: bold; }
+        .toggle-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="text-center">
+            <!-- LOCAL MITS LOGO -->
+            <img src="/images/mits-logo.png" alt="MITS Logo" class="logo">
+            <h2>MITS AMS Portal</h2>
+            <p class="subtitle">Academic & Infrastructure Management System</p>
+        </div>
+        
+        <% if(typeof error !== 'undefined' && error) { %>
+            <div class="<%= error.includes('Successful') ? 'success-msg' : 'error-msg' %>">
+                <%= error %>
+            </div>
+        <% } %>
+
+        <!-- ================= LOGIN FORM ================= -->
+        <form id="loginForm" action="/login" method="POST">
+            <div class="form-group">
+                <label>User ID (Enrollment/Email)</label>
+                <input type="text" name="userId" class="form-control" required placeholder="e.g. 0901CS20...">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" class="form-control" required placeholder="Enter your password">
+            </div>
+            <button type="submit" class="btn btn-primary">Secure Login</button>
+            <span class="toggle-link" onclick="toggleForms()">Create new account? Register here</span>
+        </form>
+
+        <!-- ================= REGISTER FORM ================= -->
+        <form id="registerForm" action="/register" method="POST" style="display: none;">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" name="name" class="form-control" required placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label>Create User ID</label>
+                <input type="text" name="userId" class="form-control" required placeholder="Enrollment or Employee ID">
+            </div>
+            <div class="form-group">
+                <label>Create Password</label>
+                <input type="password" name="password" class="form-control" required placeholder="Choose a strong password">
+            </div>
+            
+            <div class="form-group">
+                <label>Select Role</label>
+                <!-- YAHAN MAIN MANAGEMENT ROLE ADD KIYA HAI -->
+                <select name="role" class="form-control" required id="roleSelect" onchange="toggleStudentFields()">
+                    <option value="" disabled selected>-- Select your role --</option>
+                    <option value="student">👨‍🎓 Student</option>
+                    <option value="professor">👨‍🏫 Professor / Faculty</option>
+                    <option value="management">🛠️ Infrastructure Management</option>
+                </select>
+            </div>
+
+            <!-- Branch/Sem only show when Student is selected -->
+            <div id="studentFields" style="display: none;">
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Branch</label>
+                        <select name="branch" class="form-control">
+                            <option value="">-- Branch --</option>
+                            <option value="Computer Science and Design (CSD)">CSD</option>
+                            <option value="Computer Science (CSE)">CSE</option>
+                            <option value="Information Technology (IT)">IT</option>
+                            <option value="AI & Data Science (AIDS)">AIDS</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Semester</label>
+                        <select name="semester" class="form-control">
+                            <option value="">-- Sem --</option>
+                            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                            <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="background: var(--success);">Register Account</button>
+            <span class="toggle-link" onclick="toggleForms()">Already have an account? Login here</span>
+        </form>
+    </div>
+
+    <script>
+        function toggleForms() {
+            const login = document.getElementById('loginForm');
+            const reg = document.getElementById('registerForm');
+            if(login.style.display === 'none') {
+                login.style.display = 'block';
+                reg.style.display = 'none';
+            } else {
+                login.style.display = 'none';
+                reg.style.display = 'block';
+            }
+        }
+
+        function toggleStudentFields() {
+            const role = document.getElementById('roleSelect').value;
+            const stuFields = document.getElementById('studentFields');
+            // Sirf student ke liye branch aur semester jaruri hai
+            if(role === 'student') {
+                stuFields.style.display = 'block';
+            } else {
+                stuFields.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "mits_ams_final",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "mongoose": "^9.10.3",
+    "multer": "^2.4.0",
+    "socket.io": "^4.8.4",
+    "uuid": "^14.0.2"
+  }
+}

@@ -1,0 +1,22 @@
+/* MITS AMS Dark Theme - Core Styling */
+body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #1a1e29; color: #e2e8f0; margin: 0; padding: 0; }
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+/* Auth Page specific */
+.auth-container { max-width: 400px; margin: 8vh auto; text-align: center; }
+.auth-logo { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #f8fafc; }
+.auth-logo span { background: #3b82f6; padding: 5px 10px; border-radius: 5px; color: white; margin-right: 10px; }
+
+.card { background-color: #222735; border: 1px solid #2a3140; padding: 25px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+.card h3 { margin-top: 0; color: #f8fafc; border-bottom: 1px solid #2a3140; padding-bottom: 10px; }
+
+input, select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+input, select { background-color: #131720; border: 1px solid #3b82f6; color: white; }
+input:focus, select:focus { outline: none; border-color: #4ade80; }
+
+button { background-color: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
+button:hover { background-color: #1d4ed8; }
+.btn-green { background-color: #10b981; }
+.btn-green:hover { background-color: #059669; }
+
+.alert { background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-weight: 500; }
