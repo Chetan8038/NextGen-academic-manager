@@ -146,6 +146,46 @@
     <script id="attendance-data" type="application/json"><%- JSON.stringify(attendance) %></script>
     
     <script>
+        // ================= NAYA: ANTI-CALL, ANTI-OVERLAY & ANTI-DEVTOOLS SECURITY =================
+// Block Inspect Element (F12, Ctrl+Shift+I)
+document.addEventListener('keydown', function(e) {
+    if(e.keyCode == 123 || (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) || (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0))) { 
+        e.preventDefault(); 
+        alert("🚨 SECURITY: Developer Tools disabled to prevent location spoofing!"); 
+    }
+});
+
+// Block Right Click
+document.addEventListener('contextmenu', e => e.preventDefault()); 
+
+// Screen Share, Screenshot, Phone Call & Minimize Detection
+function handleSecurityBreach(reason) {
+    let reader = document.getElementById("reader");
+    if(reader && reader.style.display === "block") {
+        reader.style.display = "none"; // Hide Scanner instantly
+        showStatus("🚨 SECURITY ALERT: " + reason + " Scanner blocked.", "error");
+    }
+}
+
+// 1. Visibility change (Home button, Switch App, Call screen taking over)
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === 'hidden') {
+        handleSecurityBreach("App minimized or Screen switched!");
+    }
+});
+
+// 2. Blur (Notification shade pulled down, Popup message, Screen sharing permission box)
+window.addEventListener('blur', () => {
+    handleSecurityBreach("Window lost focus! (Call overlay or Notification shade detected)");
+});
+
+// 3. PrintScreen Key
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'PrintScreen') { 
+        navigator.clipboard.writeText(''); 
+        handleSecurityBreach("Screenshot attempt detected!"); 
+    }
+});
         // ================= ANTI-SCREENSHARE & SECURITY SCRIPT =================
         document.addEventListener('contextmenu', e => e.preventDefault()); // Block Right Click
         document.addEventListener('keyup', (e) => {

@@ -16,6 +16,17 @@ const Event = require('./models/Event');
 const Schedule = require('./models/Schedule');
 const Complaint = require('./models/Complaint');
 
+// NAYA: Advisory Notes Model
+const advisorySchema = new mongoose.Schema({
+    senderId: String,
+    senderName: String,
+    targetType: String, // 'faculty' or 'student'
+    subject: String,
+    message: String,
+    createdAt: { type: Date, default: Date.now }
+});
+const Advisory = mongoose.model('Advisory', advisorySchema);
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
@@ -29,12 +40,11 @@ mongoose.connect('mongodb://127.0.0.1:27017/mits_attendance')
     .then(() => console.log("✅ MongoDB Connected!"))
     .catch(err => console.log("❌ DB Error:", err));
 
-// ================= NAYA: SINGLE SESSION SECURITY MANAGER =================
-const activeLogins = {}; // Track active tokens per user
+// ================= SINGLE SESSION SECURITY MANAGER =================
+const activeLogins = {}; 
 
 function isSessionValid(user, req) {
     if (!user) return false;
-    // Agar existing token match nahi karta current req token se -> Multiple login detected
     if (activeLogins[user.userId] && activeLogins[user.userId] !== req.session.loginToken) return false;
     return true;
 }
@@ -60,7 +70,6 @@ app.post('/login', async (req, res) => {
     req.session.userId = user._id;
     req.session.role = user.role;
     
-    // NAYA: Session Login Token Generate kiya Dual App rokne ke liye
     const loginToken = uuidv4();
     req.session.loginToken = loginToken;
     activeLogins[user.userId] = loginToken;
@@ -92,28 +101,17 @@ app.post('/api/mandatory-profile-update', async (req, res) => {
 app.get('/student', async (req, res) => {
     if(!req.session.userId || req.session.role !== 'student') return res.redirect('/');
     const user = await User.findById(req.session.userId);
-    
-    // NAYA: Check for Dual Login
-    if (!isSessionValid(user, req)) {
-        req.session.destroy();
-        return res.send("<script>alert('🚨 SECURITY ALERT: Aapka account kisi dusre device me login hua hai. Current session terminated!'); window.location.href='/';</script>");
-    }
-
+    if (!isSessionValid(user, req)) { req.session.destroy(); return res.send("<script>alert('🚨 SECURITY ALERT: Aapka account kisi dusre device me login hua hai. Current session terminated!'); window.location.href='/';</script>"); }
     const myCourses = await Batch.find({ students: user.userId }).lean();
     const myAttendance = await Attendance.find({ studentId: user.userId }).sort({ date: -1 });
-    
     let totalOverallClasses = 0, totalAttendedOverall = 0;
     myCourses.forEach(course => {
         const attendedCount = myAttendance.filter(att => att.batchId.toString() === course._id.toString() && att.status === 'Present').length;
-        course.attendedClasses = attendedCount;
-        totalOverallClasses += course.totalClasses;
-        totalAttendedOverall += attendedCount;
+        course.attendedClasses = attendedCount; totalOverallClasses += course.totalClasses; totalAttendedOverall += attendedCount;
         course.percentage = course.totalClasses > 0 ? ((attendedCount / course.totalClasses) * 100).toFixed(1) : 0;
     });
-    
     const overallPercentage = totalOverallClasses > 0 ? ((totalAttendedOverall / totalOverallClasses) * 100).toFixed(1) : 0;
     const myComplaints = await Complaint.find({ studentId: user.userId }).sort({ createdAt: -1 });
-
     res.render('student', { user, courses: myCourses, attendance: myAttendance, overallPercentage, totalOverallClasses, totalAttendedOverall, profileIncomplete: req.session.profileIncomplete, myComplaints });
 });
 
@@ -155,38 +153,56 @@ app.post('/api/submit-quiz', async (req, res) => {
 app.get('/prof', async (req, res) => {
     if(!req.session.userId || req.session.role !== 'professor') return res.redirect('/');
     const user = await User.findById(req.session.userId);
-    
-    // NAYA: Check for Dual Login
-    if (!isSessionValid(user, req)) {
-        req.session.destroy(); return res.send("<script>alert('🚨 Multiple logins detected! Logged out.'); window.location.href='/';</script>");
-    }
+    if (!isSessionValid(user, req)) { req.session.destroy(); return res.send("<script>alert('🚨 Multiple logins detected! Logged out.'); window.location.href='/';</script>"); }
 
     const allStudents = await User.find({ role: 'student' }).sort({ userId: 1 });
     const allProfessors = await User.find({ role: 'professor' }).sort({ name: 1 }); 
-    const myBatches = await Batch.find({ profId: user.userId });
+    
+    // Convert to plain objects to modify dynamically
+    let myBatchesRaw = await Batch.find({ profId: user.userId });
+    const myBatches = myBatchesRaw.map(b => b.toObject());
     
     let totalClassesConducted = 0; let totalPresents = 0; let totalExpected = 0;
     const batchIds = myBatches.map(b => b._id);
     const allAttendance = await Attendance.find({ batchId: { $in: batchIds } });
     
-    myBatches.forEach(batch => { totalClassesConducted += batch.totalClasses; totalExpected += (batch.totalClasses * batch.students.length); });
+    myBatches.forEach(batch => { 
+        totalClassesConducted += batch.totalClasses; 
+        let expects = (batch.totalClasses * batch.students.length);
+        totalExpected += expects; 
+        
+        // Calculate % for each batch for advanced course dashboard
+        let batchPresents = allAttendance.filter(a => a.batchId.toString() === batch._id.toString() && a.status === 'Present').length;
+        batch.attendancePercent = expects > 0 ? ((batchPresents / expects) * 100).toFixed(1) : 100.0;
+    });
+    
     totalPresents = allAttendance.filter(a => a.status === 'Present').length;
-    let overallAttendancePercent = totalExpected > 0 ? ((totalPresents / totalExpected) * 100).toFixed(2) : 0;
+    let overallAttendancePercent = totalExpected > 0 ? ((totalPresents / totalExpected) * 100).toFixed(1) : 0;
 
     const myEvents = await Event.find({ profId: user.userId }).sort({ eventDate: 1 });
     const todayZero = new Date(); todayZero.setHours(0,0,0,0);
     const upcomingEvents = myEvents.filter(e => new Date(e.eventDate) >= todayZero).slice(0, 3);
-
     const mySchedules = await Schedule.find({ profId: user.userId }).sort({ startTime: 1 });
     const daysArr = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const todayName = daysArr[new Date().getDay()];
     const todaysSchedules = mySchedules.filter(s => s.dayOfWeek === todayName);
 
+    // Fetch Advisories for Modal
+    const advisories = await Advisory.find({ $or: [{ targetType: 'faculty' }, { senderId: user.userId }] }).sort({ createdAt: -1 });
+
     res.render('prof', { 
         user, students: allStudents, batches: myBatches, 
         stats: { overallAttendance: overallAttendancePercent, classesConducted: totalClassesConducted, activeCourses: myBatches.length },
-        events: myEvents, upcomingEvents, mySchedules, todaysSchedules, todayName, allProfessors
+        events: myEvents, upcomingEvents, mySchedules, todaysSchedules, todayName, allProfessors, advisories
     });
+});
+
+// API for sending Advisory
+app.post('/api/send-advisory', async (req, res) => {
+    const user = await User.findById(req.session.userId);
+    const { targetType, subject, message } = req.body;
+    await Advisory.create({ senderId: user.userId, senderName: user.name, targetType, subject, message });
+    res.json({ success: true });
 });
 
 app.post('/create-batch', async (req, res) => {
@@ -280,9 +296,7 @@ app.post('/api/update-attendance', async (req, res) => {
 app.get('/management', async (req, res) => {
     if(!req.session.userId || req.session.role !== 'management') return res.redirect('/');
     const user = await User.findById(req.session.userId);
-    if (!isSessionValid(user, req)) {
-        req.session.destroy(); return res.send("<script>alert('🚨 Multiple logins detected! Logged out.'); window.location.href='/';</script>");
-    }
+    if (!isSessionValid(user, req)) { req.session.destroy(); return res.send("<script>alert('🚨 Multiple logins detected! Logged out.'); window.location.href='/';</script>"); }
     const complaints = await Complaint.find().sort({ createdAt: -1 }); 
     res.render('management', { user, complaints });
 });
@@ -295,22 +309,17 @@ app.post('/api/resolve-complaint/:id', async (req, res) => {
 // ================= ANTI-PROXY DYNAMIC QR ENGINE =================
 let activeSessions = {}; let sessionIntervals = {};
 
-// GEOFENCING MATH LOGIC (Haversine Formula to calculate distance in meters)
 function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; // Earth radius in metres
-    const p1 = lat1 * Math.PI/180;
-    const p2 = lat2 * Math.PI/180;
-    const dp = (lat2-lat1) * Math.PI/180;
-    const dl = (lon2-lon1) * Math.PI/180;
+    const R = 6371e3; 
+    const p1 = lat1 * Math.PI/180; const p2 = lat2 * Math.PI/180;
+    const dp = (lat2-lat1) * Math.PI/180; const dl = (lon2-lon1) * Math.PI/180;
     const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; // Distance in meters
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); return R * c; 
 }
 
 io.on('connection', (socket) => {
     socket.on('start-attendance', async (data) => {
         const sessionId = uuidv4();
-        // Professor ki GPS lat/lng save ho rahi hai active session mein
         activeSessions[sessionId] = { ...data, token: uuidv4() };
         socket.join(sessionId);
         await Batch.findByIdAndUpdate(data.batchId, { $inc: { totalClasses: 1 } });
@@ -353,22 +362,12 @@ app.post('/api/mark-attendance', async (req, res) => {
     const batch = await Batch.findById(session.batchId);
     if (!batch || !batch.students.includes(studentId)) return res.status(403).json({ error: "Aap is batch me nahi hain!" });
 
-    // ================= LOOPHOLE 1: FAKE GPS & GEOFENCING CHECK =================
-    if (accuracy > 1500) {
-        return res.status(403).json({ error: "🚨 MOCK LOCATION DETECTED: Fake GPS is not allowed." });
-    }
+    if (accuracy > 1500) return res.status(403).json({ error: "🚨 MOCK LOCATION DETECTED: Fake GPS is not allowed." });
     const dist = getDistance(session.lat, session.lng, lat, lng);
-    if (dist > 50) { // 50 METERS RADIUS LIMIT
-        return res.status(403).json({ error: `🚨 LOCATION BLOCKED: Aap class se ${Math.round(dist)} meter door hain! Proxy lagana mana hai.` });
-    }
+    if (dist > 50) return res.status(403).json({ error: `🚨 LOCATION BLOCKED: Aap class se ${Math.round(dist)} meter door hain!` });
 
-    // ================= LOOPHOLE 3 & 4: STRICT DEVICE ID BINDING =================
-    // Ab device ID khali hai toh hi save hogi, ek baar save hone par bina admin ke change nahi hogi
-    if (!user.registeredDevice) {
-        user.registeredDevice = deviceId; await user.save();
-    } else if (user.registeredDevice !== deviceId) {
-        return res.status(403).json({ error: "🚨 DEVICE BLOCKED: Ye aapka primary registered phone nahi hai. Device change karne ke liye HOD se sampark karein." });
-    }
+    if (!user.registeredDevice) { user.registeredDevice = deviceId; await user.save(); } 
+    else if (user.registeredDevice !== deviceId) { return res.status(403).json({ error: "🚨 DEVICE BLOCKED: Ye aapka primary registered phone nahi hai." }); }
 
     const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
     const endOfDay = new Date(); endOfDay.setHours(23,59,59,999);
@@ -376,9 +375,11 @@ app.post('/api/mark-attendance', async (req, res) => {
     const existingAtt = await Attendance.findOne({ studentId, batchId: session.batchId, date: { $gte: startOfDay, $lte: endOfDay } });
     if(!existingAtt) {
         await Attendance.create({ studentId, batchId: session.batchId, subjectName: batch.subjectName, status: 'Present' });
+        io.to(sessionId).emit('live-attendance-update', { studentId: user.userId, studentName: user.name, time: new Date().toLocaleTimeString() });
         res.json({ success: true, message: "Attendance Marked Successfully!" });
     } else if (existingAtt.status === 'Absent') {
         existingAtt.status = 'Present'; await existingAtt.save();
+        io.to(sessionId).emit('live-attendance-update', { studentId: user.userId, studentName: user.name, time: new Date().toLocaleTimeString() });
         res.json({ success: true, message: "Attendance Marked (Updated from Absent)!" });
     } else {
         res.json({ success: true, message: "Aapki aaj ki attendance pehle hi lag chuki hai." });

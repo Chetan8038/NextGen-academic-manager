@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🎓 MITS Smart Campus ERP & Anti-Proxy Attendance System
 
 ![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
@@ -43,3 +44,7 @@ A comprehensive, high-security **Smart Campus Management System** built initiall
    ```bash
    git clone [https://github.com/your-username/mits-smart-campus-erp.git](https://github.com/your-username/mits-smart-campus-erp.git)
    cd mits-smart-campus-erp
+=======
+# NextGen-academic-manager
+"A high-security, anti-proxy Attendance Management and Smart Campus ERP system featuring GPS geofencing, dynamic QR, device-binding for attendance and to prevent proxies, quiz/tests taker with high monitoring like tab switching,resuffling questions etc. (under development )and infrastructure reporting." The system is now (under development)
+>>>>>>> 9490543f1156bc20d7bd5705d85a5d5b440791c6
