@@ -63,6 +63,38 @@
         
         .pulse-hero { background: url('https://mitsgwalior.in/images/slider/banner3.jpg') center/cover; height: 350px; border-radius: 12px; position: relative; margin-top:20px; border:1px solid var(--border-color); overflow:hidden;}
         .pulse-overlay { position:absolute; bottom:0; left:0; width:100%; padding:30px; background: linear-gradient(transparent, #0f111a 90%); box-sizing:border-box;}
+        /* MOBILE RESPONSIVENESS */
+@media (max-width: 768px) {
+    body { flex-direction: column; overflow-y: auto; height: auto; }
+    .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-color); padding: 10px; }
+    .brand { border-bottom: none; padding: 10px; justify-content: center; }
+    .nav-menu { display: flex; overflow-x: auto; white-space: nowrap; padding: 0 10px; gap: 10px; }
+    .nav-item { padding: 8px 15px; border-radius: 20px; font-size: 12px; }
+    .nav-item.active { border-left: none; border-bottom: 3px solid var(--primary); }
+    .sidebar-footer { display: none; }
+    
+    .main-content { overflow-y: visible; }
+    .top-nav { flex-direction: column; align-items: flex-start; gap: 15px; padding: 15px; }
+    .top-nav-right { width: 100%; flex-wrap: wrap; justify-content: space-between; }
+    .content-area { padding: 15px; }
+    
+    /* Convert 3-column grids to 1-column on mobile */
+    div[style*="grid-template-columns:1fr 1fr 1fr"], 
+    div[style*="grid-template-columns: 1fr 1fr 1fr"] { grid-template-columns: 1fr !important; }
+    
+    /* Convert 2-column grids to 1-column */
+    div[style*="grid-template-columns:1fr 1fr"], 
+    div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+    
+    .forms-grid { grid-template-columns: 1fr; }
+    
+    /* Tables scrolling fix */
+    table { display: block; overflow-x: auto; white-space: nowrap; }
+    
+    /* QR Scanner Flex fix */
+    div[style*="display: flex; gap: 30px;"] { flex-direction: column !important; gap: 15px !important; }
+    #qr-code { width: 100% !important; height: auto !important; }
+}
     </style>
 </head>
 <body>

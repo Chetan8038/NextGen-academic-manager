@@ -36,7 +36,7 @@ app.use(express.json({limit: '50mb'}));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(session({ secret: 'mits_ams_secure_key', resave: false, saveUninitialized: true }));
 
-mongoose.connect('mongodb://127.0.0.1:27017/mits_attendance')
+mongoose.connect('mongodb+srv://26cd1ch45_db_user:7mOBbI5YQ0MGcryU@cluster0.ktcakzc.mongodb.net/')
     .then(() => console.log("✅ MongoDB Connected!"))
     .catch(err => console.log("❌ DB Error:", err));
 
